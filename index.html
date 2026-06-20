@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DMP 2.0 — Калькулятор плана выпечки</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.2.0/tabler-icons.min.css">
+</head>
+<body>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--p5red:#CC2229;--p5green:#78B828}
+body{font-family:var(--font-sans,system-ui,sans-serif);background:var(--color-background-primary)}
+.app-wrap{min-height:600px;display:flex;flex-direction:column}
+
+/* ── HEADER: two-row layout ── */
+.topbar{background:var(--p5red);color:#fff;display:flex;flex-direction:column;padding:0;
+  background:linear-gradient(135deg,#b81c22 0%,#CC2229 60%,#d93a40 100%)}
+.brand-row{display:flex;align-items:center;justify-content:space-between;padding:10px 20px 8px;
+  border-bottom:1px solid rgba(255,255,255,0.12)}
+.logo-zone{display:flex;align-items:center;gap:11px}
+.logo-circle{width:36px;height:36px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 1px 4px rgba(0,0,0,0.18)}
+.logo-circle span{color:var(--p5red);font-weight:800;font-size:17px;letter-spacing:-0.5px}
+.brand-name{font-size:16px;font-weight:700;letter-spacing:0.01em;line-height:1}
+.brand-sub{font-size:11px;opacity:0.65;margin-top:2px;font-weight:400;letter-spacing:0.02em}
+.nav-row{display:flex;align-items:stretch;overflow-x:auto}
+.tabs{display:flex;flex:1}
+.tab{padding:9px 16px;font-size:12.5px;cursor:pointer;border-bottom:2.5px solid transparent;
+  color:rgba(255,255,255,0.65);white-space:nowrap;transition:all 0.15s;flex-shrink:0;
+  letter-spacing:0.01em}
+.tab:hover{color:#fff;background:rgba(255,255,255,0.07)}
+.tab.active{color:#fff;border-bottom-color:var(--p5green);font-weight:600;
+  background:rgba(255,255,255,0.05)}
+.edit-btn{margin:6px 14px 6px auto;padding:5px 13px;background:rgba(255,255,255,0.12);
+  border:1px solid rgba(255,255,255,0.28);color:#fff;border-radius:6px;
+  font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;
+  transition:background 0.15s;flex-shrink:0;align-self:center}
+.edit-btn:hover{background:rgba(255,255,255,0.22)}
+.edit-btn.active{background:var(--p5green);border-color:var(--p5green)}
+
+/* ── FIELD HIGHLIGHT: subtle warm tint on interactive fields ── */
+.param-select,.param-input{
+  background:rgba(204,34,41,0.04) !important;
+  border-color:rgba(0,0,0,0.13) !important;
+  transition:border-color 0.15s,box-shadow 0.15s,background 0.15s}
+.param-select:hover,.param-input:hover{
+  background:rgba(204,34,41,0.07) !important;
+  border-color:rgba(204,34,41,0.3) !important}
+.param-select:focus,.param-input:focus{
+  outline:none;
+  background:#fff !important;
+  border-color:rgba(204,34,41,0.5) !important;
+  box-shadow:0 0 0 3px rgba(204,34,41,0.10)}
+.data-entry-table input[type=text],.data-entry-table input[type=number]{
+  background:rgba(0,0,0,0.025) !important;
+  border-color:rgba(0,0,0,0.11) !important;
+  transition:border-color 0.15s,box-shadow 0.15s,background 0.15s}
+.data-entry-table input[type=text]:hover,.data-entry-table input[type=number]:hover{
+  background:rgba(204,34,41,0.05) !important;
+  border-color:rgba(204,34,41,0.25) !important}
+.data-entry-table input[type=text]:focus,.data-entry-table input[type=number]:focus{
+  outline:none;background:#fff !important;
+  border-color:rgba(204,34,41,0.5) !important;
+  box-shadow:0 0 0 2px rgba(204,34,41,0.10)}
+.page{display:none;padding:24px;flex:1}
+.page.active{display:block}
+.section-title{font-size:15px;font-weight:500;color:var(--color-text-primary);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.section-title i{color:var(--p5red);font-size:17px}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg,12px);padding:16px 18px}
+.coeff-row{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md,8px);font-size:13px;margin-bottom:6px}
+.coeff-label{font-size:11px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:10px}
+.coeff-input{width:60px;border:1px solid var(--color-border-secondary);border-radius:4px;padding:2px 6px;font-size:12px;background:var(--color-background-primary);color:var(--color-text-primary);text-align:right}
+.coeff-input:disabled{border-color:transparent;background:transparent;color:var(--p5red);font-weight:500}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.params-panel{background:var(--color-background-secondary);border-radius:var(--border-radius-lg,12px);padding:18px;margin-bottom:20px;border:0.5px solid var(--color-border-tertiary)}
+.param-row{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.param-row:last-child{margin-bottom:0}
+.param-label{font-size:13px;color:var(--color-text-secondary);width:190px;flex-shrink:0}
+.param-select,.param-input{flex:1;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md,8px);padding:7px 10px;font-size:13px;background:var(--color-background-primary);color:var(--color-text-primary)}
+.param-input{max-width:110px}
+.btn-primary{padding:10px 20px;background:var(--p5red);color:#fff;border:none;border-radius:var(--border-radius-md,8px);font-size:13px;font-weight:500;cursor:pointer;transition:opacity 0.15s}
+.btn-primary:hover{opacity:0.88}
+.btn-secondary{padding:10px 16px;background:var(--color-background-secondary);color:var(--color-text-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md,8px);font-size:13px;cursor:pointer;transition:background 0.15s;display:inline-flex;align-items:center;gap:6px}
+.btn-secondary:hover{background:var(--color-background-tertiary)}
+.results-table{width:100%;border-collapse:collapse;font-size:13px}
+.results-table th{text-align:left;padding:9px 10px;background:var(--p5red);color:#fff;font-weight:500;font-size:12px}
+.results-table td{padding:8px 10px;border-bottom:0.5px solid var(--color-border-tertiary);color:var(--color-text-primary)}
+.results-table tr:hover td{background:var(--color-background-secondary)}
+.plan-badge{display:inline-flex;align-items:center;justify-content:center;min-width:28px;padding:2px 7px;border-radius:4px;font-weight:500;font-size:12px}
+.plan-morning{background:#FFF3CD;color:#856404}
+.plan-day{background:#D1ECF1;color:#0C5460}
+.plan-evening{background:#F8D7DA;color:#721C24}
+.plan-total{background:#D4EDDA;color:#155724;font-weight:700}
+.plan-zero{background:var(--color-background-secondary);color:var(--color-text-secondary)}
+.metric-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.metric-card{background:var(--color-background-secondary);border-radius:var(--border-radius-md,8px);padding:12px 14px}
+.mc-label{font-size:11px;color:var(--color-text-secondary);margin-bottom:4px}
+.mc-val{font-size:22px;font-weight:500;color:var(--color-text-primary)}
+.mc-sub{font-size:11px;color:var(--color-text-secondary);margin-top:2px}
+.chart-wrap{position:relative;height:220px;margin:12px 0}
+.data-entry-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-entry-table th{padding:8px 8px;background:var(--color-background-secondary);color:var(--color-text-secondary);font-size:11px;text-align:center;border-bottom:0.5px solid var(--color-border-tertiary)}
+.data-entry-table th:first-child{text-align:left}
+.data-entry-table td{padding:5px 4px;border-bottom:0.5px solid var(--color-border-tertiary)}
+.data-entry-table input[type=text]{width:100%;border:0.5px solid var(--color-border-secondary);border-radius:4px;padding:4px 6px;font-size:12px;background:var(--color-background-primary);color:var(--color-text-primary)}
+.data-entry-table input.name-inp{text-align:left}
+.data-entry-table input[type=number]{width:54px;border:0.5px solid var(--color-border-secondary);border-radius:4px;padding:4px 6px;font-size:12px;background:var(--color-background-primary);color:var(--color-text-primary);text-align:center}
+.pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px}
+.pill-red{background:#FDECEA;color:var(--p5red)}
+.pill-green{background:#EBF5DC;color:#3B6D11}
+.divider{height:0.5px;background:var(--color-border-tertiary);margin:20px 0}
+.onboard-step{display:flex;gap:16px;align-items:flex-start;margin-bottom:20px}
+.step-num{width:32px;height:32px;background:var(--p5red);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:500;font-size:14px;flex-shrink:0}
+.step-body h4{font-size:14px;font-weight:500;color:var(--color-text-primary);margin-bottom:4px}
+.step-body p{font-size:13px;color:var(--color-text-secondary);line-height:1.5}
+.formula-box{background:var(--color-background-secondary);border-left:3px solid var(--p5red);border-radius:0 var(--border-radius-md,8px) var(--border-radius-md,8px) 0;padding:12px 16px;font-size:13px;color:var(--color-text-primary);margin:10px 0;font-style:italic}
+.share-bar{display:flex;height:24px;border-radius:4px;overflow:hidden;margin:8px 0;max-width:400px}
+.share-morning{background:#F6C90E;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:#4A3900;width:45%}
+.share-day{background:#78B828;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:#173404;width:40%}
+.share-evening{background:#CC2229;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:#fff;width:15%}
+.alert{padding:10px 14px;border-radius:var(--border-radius-md,8px);font-size:13px;margin-bottom:14px;display:none}
+.alert-success{background:#D4EDDA;color:#155724;display:block}
+.alert-warn{background:#FFF3CD;color:#856404;display:block}
+.empty-state{text-align:center;padding:40px 20px;color:var(--color-text-secondary);font-size:13px}
+.empty-state i{font-size:36px;display:block;margin-bottom:8px;opacity:0.4}
+.enc-hint{font-size:11px;color:var(--color-text-secondary);margin-top:6px;line-height:1.5}
+</style>
+
+
+<div class="app-wrap">
+<div class="topbar">
+  <!-- brand row -->
+  <div class="brand-row">
+    <div class="logo-zone">
+      <div class="logo-circle"><span>5</span></div>
+      <div>
+        <div class="brand-name">DMP 2.0</div>
+        <div class="brand-sub">Пекарня · Хлеб СП · Калькулятор выпечки</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px">
+      <div style="width:1px;height:28px;background:rgba(255,255,255,0.18)"></div>
+      <div style="text-align:right;font-size:11px;opacity:0.55;line-height:1.5">
+        Планирование<br>по окнам продаж
+      </div>
+    </div>
+  </div>
+  <!-- nav row -->
+  <div class="nav-row">
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('onboard')">Пример</div>
+      <div class="tab" onclick="switchTab('data')">Данные</div>
+      <div class="tab" onclick="switchTab('params')">Параметры</div>
+      <div class="tab" onclick="switchTab('plan')">План</div>
+      <div class="tab" onclick="switchTab('coeff')">Коэффициенты</div>
+    </div>
+    <button class="edit-btn" id="editBtn" onclick="toggleEdit()" style="display:none">
+      <i class="ti ti-pencil" aria-hidden="true"></i> <span id="editBtnTxt">Изменить</span>
+    </button>
+  </div>
+</div>
+
+<!-- ONBOARDING -->
+<div class="page active" id="page-onboard">
+  <div style="max-width:640px;margin:0 auto">
+    <div style="margin-bottom:24px">
+      <div style="font-size:18px;font-weight:500;color:var(--color-text-primary);margin-bottom:6px">Как работает калькулятор</div>
+      <div style="font-size:13px;color:var(--color-text-secondary)">Два шага от истории продаж до готового плана выпечки</div>
+    </div>
+    <div class="onboard-step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h4>Взвешенное скользящее среднее (WMA)</h4>
+        <p>Берём продажи за тот же день недели в предыдущие 4 недели. Ближайшая неделя важнее — у неё больший вес.</p>
+        <div class="formula-box">WMA = 0,1 × W₋₄ + 0,2 × W₋₃ + 0,3 × W₋₂ + 0,4 × W₋₁</div>
+      </div>
+    </div>
+    <div class="onboard-step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h4>Корректировка на внешние условия</h4>
+        <p>Базовый прогноз умножается на коэффициенты праздника, погоды, промо и расположения. K_день применяется автоматически по дате.</p>
+        <div class="formula-box">Прогноз = WMA × K_праздник × K_погода × K_промо × K_расположение</div>
+        <p style="font-size:12px;color:var(--color-text-secondary);margin-top:6px">Результат округляется вверх, минимум — 3 штуки.</p>
+      </div>
+    </div>
+    <div class="onboard-step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h4>Разбивка по временным окнам</h4>
+        <div class="share-bar">
+          <div class="share-morning">до откр. 45%</div>
+          <div class="share-day">до 12:00 40%</div>
+          <div class="share-evening">до 17:00 15%</div>
+        </div>
+        <p style="font-size:12px;color:var(--color-text-secondary);margin-top:6px">Если вечерняя доля &lt; 15% — вечерняя партия отменяется, объём перераспределяется.</p>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div style="font-size:14px;font-weight:500;color:var(--color-text-primary);margin-bottom:14px">Пример расчёта — данные магазина 30VY</div>
+    <div class="card" style="margin-bottom:16px;overflow-x:auto">
+      <div class="coeff-label" style="margin-bottom:12px">Воскресенье, метель, длинные выходные, 2+1/комбо — K_общий ≈ 0.506</div>
+      <table class="results-table" style="font-size:12px;min-width:600px">
+        <thead><tr>
+          <th>Позиция</th><th style="text-align:center">W−4</th><th style="text-align:center">W−3</th>
+          <th style="text-align:center">W−2</th><th style="text-align:center">W−1</th>
+          <th style="text-align:center">WMA</th><th style="text-align:center">Итого</th>
+          <th style="text-align:center">Утро</th><th style="text-align:center">День</th><th style="text-align:center">Вечер</th>
+        </tr></thead>
+        <tbody id="exampleTbody"></tbody>
+      </table>
+    </div>
+    <div id="exampleChart" class="chart-wrap"></div>
+    <div style="display:flex;justify-content:center;margin-top:20px">
+      <button class="btn-primary" onclick="switchTab('data')">Перейти к вводу данных <i class="ti ti-arrow-right" aria-hidden="true"></i></button>
+    </div>
+  </div>
+</div>
+
+<!-- DATA -->
+<div class="page" id="page-data">
+  <div class="section-title"><i class="ti ti-table" aria-hidden="true"></i>Исторические продажи</div>
+  <div id="csvAlert" class="alert"></div>
+
+  <div style="display:flex;gap:10px;margin-bottom:8px;flex-wrap:wrap;align-items:center">
+    <label class="btn-secondary" style="cursor:pointer">
+      <i class="ti ti-upload" aria-hidden="true"></i> Загрузить CSV
+      <input type="file" style="display:none" id="csvFile" accept=".csv,.txt" onchange="loadCSV(this)">
+    </label>
+    <button class="btn-secondary" onclick="addRow()"><i class="ti ti-plus" aria-hidden="true"></i> Добавить строку</button>
+    <button class="btn-secondary" onclick="loadExample()"><i class="ti ti-refresh" aria-hidden="true"></i> Загрузить пример</button>
+  </div>
+  <div class="enc-hint">
+    CSV формат: <b>PLU; Наименование; W-4; W-3; W-2; W-1</b> (разделитель ; или ,)<br>
+    Поддерживаются кодировки: <b>UTF-8</b> и <b>Windows-1251</b> (файлы из Excel/1C автоматически определяются)
+  </div>
+
+  <div style="overflow-x:auto;margin-top:16px">
+    <table class="data-entry-table" id="dataTable">
+      <thead><tr>
+        <th style="text-align:left;min-width:70px">PLU</th>
+        <th style="text-align:left;min-width:180px">Наименование</th>
+        <th>W−4</th><th>W−3</th><th>W−2</th><th>W−1</th>
+        <th style="width:32px"></th>
+      </tr></thead>
+      <tbody id="dataBody"></tbody>
+    </table>
+  </div>
+  <div id="dataEmpty" class="empty-state"><i class="ti ti-table-off" aria-hidden="true"></i>Нет данных. Добавьте позиции вручную или загрузите CSV.</div>
+
+  <div style="display:flex;gap:10px;margin-top:16px">
+    <button class="btn-primary" onclick="switchTab('params')">Далее: параметры дня <i class="ti ti-arrow-right" aria-hidden="true"></i></button>
+  </div>
+</div>
+
+<!-- PARAMS -->
+<div class="page" id="page-params">
+  <div class="section-title"><i class="ti ti-calendar-event" aria-hidden="true"></i>Параметры дня</div>
+  <div class="params-panel">
+    <div class="param-row">
+      <span class="param-label">Дата расчёта</span>
+      <input type="date" class="param-input" id="pDate" style="max-width:160px" onchange="updateDayOfWeek()">
+      <span id="dowLabel" style="font-size:13px;color:var(--color-text-secondary)"></span>
+    </div>
+    <div class="param-row">
+      <span class="param-label">Тип праздника</span>
+      <select class="param-select" id="pHoliday" onchange="updateKSummary()">
+        <option value="1">Обычный день</option>
+        <option value="1.2">Начало месяца (1-5)</option>
+        <option value="1.3">Предпраздничный</option>
+        <option value="0.7">День праздника</option>
+        <option value="1.1">Послепраздничный</option>
+        <option value="0.8" selected>Длинные выходные</option>
+        <option value="1.25">Чёрная пятница / акция</option>
+      </select>
+    </div>
+    <div class="param-row">
+      <span class="param-label">Погода</span>
+      <select class="param-select" id="pWeather" onchange="updateKSummary()">
+        <option value="1">Норма (0–20 °C)</option>
+        <option value="0.95">Дождь / снег</option>
+        <option value="0.85">Сильный мороз (&lt;−15 °C)</option>
+        <option value="0.9">Жара (&gt;28 °C)</option>
+        <option value="0.8" selected>Метель / гололёд</option>
+      </select>
+    </div>
+    <div class="param-row">
+      <span class="param-label">Промо / акция</span>
+      <select class="param-select" id="pPromo" onchange="updateKSummary()">
+        <option value="1">Нет акции</option>
+        <option value="1.1">Скидка 10–20%</option>
+        <option value="1.2">Скидка 20–30%</option>
+        <option value="1.3">Скидка &gt;30%</option>
+        <option value="1.3" selected>2+1 / комбо</option>
+      </select>
+    </div>
+    <div class="param-row">
+      <span class="param-label">Расположение магазина</span>
+      <select class="param-select" id="pLocation" onchange="updateKSummary()">
+        <option value="1" selected>Смешанный тип</option>
+        <option value="0.73">Транзитный / офисный</option>
+        <option value="0.63">Транзитный (малый)</option>
+        <option value="1.28">Жилой район</option>
+      </select>
+    </div>
+    <div class="divider" style="margin:14px 0"></div>
+    <div class="coeff-label">Доли продаж по окнам</div>
+    <div style="display:flex;gap:20px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:13px;color:var(--color-text-secondary)">До открытия</span>
+        <input type="number" class="param-input" id="pShareMorning" value="0.45" step="0.01" min="0" max="1" style="max-width:70px" onchange="updateKSummary()">
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:13px;color:var(--color-text-secondary)">До 17:00</span>
+        <input type="number" class="param-input" id="pShareEvening" value="0.15" step="0.01" min="0" max="1" style="max-width:70px" onchange="updateKSummary()">
+      </div>
+      <span style="font-size:12px;color:var(--color-text-secondary);align-self:center">Доля «до 12:00» — автоматически</span>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:20px">
+    <div class="coeff-label">Итоговый множитель прогноза</div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px" id="kSummaryInner"></div>
+  </div>
+
+  <div style="display:flex;gap:10px">
+    <button class="btn-primary" onclick="calcPlan()">Рассчитать план <i class="ti ti-calculator" aria-hidden="true"></i></button>
+    <button class="btn-secondary" onclick="switchTab('plan')">Посмотреть план</button>
+  </div>
+</div>
+
+<!-- PLAN -->
+<div class="page" id="page-plan">
+  <div id="planEmpty" class="empty-state">
+    <i class="ti ti-calculator" aria-hidden="true"></i>
+    Нажмите «Рассчитать план» на вкладке Параметры.<br><br>
+    <button class="btn-primary" style="margin-top:12px" onclick="calcPlan()">Рассчитать план</button>
+  </div>
+  <div id="planContent" style="display:none">
+    <div class="metric-cards" id="metricCards"></div>
+    <div id="planChart" class="chart-wrap"></div>
+    <div class="section-title" style="margin-top:16px"><i class="ti ti-list-check" aria-hidden="true"></i>План выпечки по окнам</div>
+    <div style="overflow-x:auto">
+      <table class="results-table" id="planTable">
+        <thead><tr>
+          <th>PLU</th><th>Наименование</th>
+          <th style="text-align:center">WMA</th><th style="text-align:center">Прогноз</th>
+          <th style="text-align:center">Утро</th><th style="text-align:center">До 12:00</th>
+          <th style="text-align:center">До 17:00</th><th style="text-align:center">Итого</th>
+          <th style="text-align:center">vs история</th>
+        </tr></thead>
+        <tbody id="planBody"></tbody>
+        <tfoot id="planFoot"></tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- COEFFICIENTS -->
+<div class="page" id="page-coeff">
+  <div class="section-title"><i class="ti ti-adjustments" aria-hidden="true"></i>Справочник коэффициентов</div>
+  <div style="font-size:13px;color:var(--color-text-secondary);margin-bottom:16px">Нажмите «Изменить» в шапке, чтобы редактировать значения.</div>
+  <div class="three-col">
+    <div class="card"><div class="coeff-label">K_праздник</div><div id="coeffHoliday"></div></div>
+    <div class="card"><div class="coeff-label">K_погода</div><div id="coeffWeather"></div></div>
+    <div class="card"><div class="coeff-label">K_промо</div><div id="coeffPromo"></div></div>
+  </div>
+  <div class="card" style="margin-top:16px;max-width:360px">
+    <div class="coeff-label">K_расположение</div><div id="coeffLocation"></div>
+  </div>
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const COEFFS = {
+  holiday:[
+    {label:'Обычный день',val:1},{label:'Начало месяца (1-5)',val:1.2},
+    {label:'Предпраздничный',val:1.3},{label:'День праздника',val:0.7},
+    {label:'Послепраздничный',val:1.1},{label:'Длинные выходные',val:0.8},
+    {label:'Чёрная пятница / акция',val:1.25}
+  ],
+  weather:[
+    {label:'Норма (0–20°C)',val:1},{label:'Дождь / снег',val:0.95},
+    {label:'Сильный мороз (<−15°C)',val:0.85},{label:'Жара (>28°C)',val:0.9},
+    {label:'Метель / гололёд',val:0.8}
+  ],
+  promo:[
+    {label:'Нет акции',val:1},{label:'Скидка 10–20%',val:1.1},
+    {label:'Скидка 20–30%',val:1.2},{label:'Скидка >30%',val:1.3},
+    {label:'2+1 / комбо',val:1.3}
+  ],
+  location:[
+    {label:'Смешанный тип',val:1},{label:'Транзитный / офисный',val:0.73},
+    {label:'Транзитный (малый)',val:0.63},{label:'Жилой район',val:1.28}
+  ]
+};
+
+const KDAY={0:0.608,1:0.713,2:0.644,3:0.889,4:1,5:0.977,6:0.973};
+const DOW_RU=['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'];
+
+const EXAMPLE_DATA=[
+  {plu:'78030124',name:'Багет чесночный 158г',w4:6,w3:7,w2:4,w1:3},
+  {plu:'78011228',name:'Пирожок с капустой 75г',w4:11,w3:6,w2:28,w1:0},
+  {plu:'78033013',name:'Круассан классический 50г',w4:0,w3:2,w2:2,w1:7},
+  {plu:'78006242',name:'Слойка с сосиской 75г',w4:8,w3:11,w2:2,w1:9},
+  {plu:'78036657',name:'Улитка ГРЕЧ. 130г',w4:4,w3:2,w2:8,w1:12},
+  {plu:'78032555',name:'Улитка с ван./изюмом 90г',w4:6,w3:0,w2:7,w1:1},
+];
+
+let tableData=[], editMode=false, planData=[];
+let exChart=null, planChart=null;
+
+function switchTab(t){
+  const names=['onboard','data','params','plan','coeff'];
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',names[i]===t));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+t).classList.add('active');
+  document.getElementById('editBtn').style.display=t==='coeff'?'flex':'none';
+  if(t==='plan'&&planData.length>0)renderPlan();
+  if(t==='onboard')setTimeout(drawExampleChart,200);
+  if(t==='params')updateKSummary();
+  updateDataEmpty();
+}
+
+function toggleEdit(){
+  editMode=!editMode;
+  const btn=document.getElementById('editBtn');
+  btn.classList.toggle('active',editMode);
+  document.getElementById('editBtnTxt').textContent=editMode?'Сохранить':'Изменить';
+  document.querySelectorAll('.coeff-input').forEach(inp=>inp.disabled=!editMode);
+  if(!editMode)syncCoeffsFromInputs();
+}
+
+function syncCoeffsFromInputs(){
+  ['holiday','weather','promo','location'].forEach(k=>{
+    COEFFS[k].forEach((item,i)=>{
+      const inp=document.getElementById('c_'+k+'_'+i);
+      if(inp)item.val=parseFloat(inp.value)||item.val;
+    });
+  });
+}
+
+function renderCoeffGroup(key,cid){
+  const cont=document.getElementById(cid);
+  if(!cont)return;
+  cont.innerHTML='';
+  COEFFS[key].forEach((item,i)=>{
+    const row=document.createElement('div');
+    row.className='coeff-row';
+    row.innerHTML=`<span style="font-size:12px;color:var(--color-text-primary)">${item.label}</span>
+      <input class="coeff-input" id="c_${key}_${i}" type="number" step="0.01" value="${item.val}" disabled>`;
+    cont.appendChild(row);
+  });
+}
+
+function renderAllCoeffs(){
+  renderCoeffGroup('holiday','coeffHoliday');
+  renderCoeffGroup('weather','coeffWeather');
+  renderCoeffGroup('promo','coeffPromo');
+  renderCoeffGroup('location','coeffLocation');
+}
+
+function wma(w4,w3,w2,w1){return 0.1*w4+0.2*w3+0.3*w2+0.4*w1;}
+
+function getKDay(dateStr){
+  if(!dateStr)return 0.608;
+  return KDAY[new Date(dateStr).getDay()]||0.608;
+}
+
+function updateDayOfWeek(){
+  const v=document.getElementById('pDate').value;
+  if(!v)return;
+  document.getElementById('dowLabel').textContent='— '+DOW_RU[new Date(v).getDay()];
+  updateKSummary();
+}
+
+function updateKSummary(){
+  const kd=getKDay(document.getElementById('pDate').value);
+  const kh=parseFloat(document.getElementById('pHoliday').value)||1;
+  const kw=parseFloat(document.getElementById('pWeather').value)||1;
+  const kp=parseFloat(document.getElementById('pPromo').value)||1;
+  const kl=parseFloat(document.getElementById('pLocation').value)||1;
+  const total=kd*kh*kw*kp*kl;
+  const inner=document.getElementById('kSummaryInner');
+  if(!inner)return;
+  const parts=[
+    {label:'K_праздник',val:kh,color:'#CC2229'},
+    {label:'K_погода',val:kw,color:'#E67E22'},
+    {label:'K_промо',val:kp,color:'#27AE60'},
+    {label:'K_расположение',val:kl,color:'#2980B9'},
+  ];
+  inner.innerHTML=parts.map(p=>`<span style="font-size:12px;padding:4px 10px;background:var(--color-background-secondary);border-radius:4px">${p.label} <b style="color:${p.color}">${p.val.toFixed(2)}</b></span>`).join('<span style="color:var(--color-text-secondary);padding:0 2px">×</span>')+
+  `<span style="color:var(--color-text-secondary)">=</span><span style="font-size:16px;font-weight:500;color:var(--p5red)">${total.toFixed(4)}</span><span style="font-size:11px;color:var(--color-text-secondary);margin-left:4px">(K_день=${kd.toFixed(3)} учтён)</span>`;
+}
+
+function calcRow(row){
+  const kd=getKDay(document.getElementById('pDate').value);
+  const kh=parseFloat(document.getElementById('pHoliday').value)||1;
+  const kw=parseFloat(document.getElementById('pWeather').value)||1;
+  const kp=parseFloat(document.getElementById('pPromo').value)||1;
+  const kl=parseFloat(document.getElementById('pLocation').value)||1;
+  const sm=parseFloat(document.getElementById('pShareMorning').value)||0.45;
+  const se=parseFloat(document.getElementById('pShareEvening').value)||0.15;
+  const w=wma(row.w4||0,row.w3||0,row.w2||0,row.w1||0);
+  const forecast=w*kd*kh*kw*kp*kl;
+  const daily=Math.max(3,Math.ceil(forecast));
+  let morning,day,evening;
+  if(se<0.15){morning=Math.ceil(daily*0.55);day=daily-morning;evening=0;}
+  else{morning=Math.ceil(daily*sm);evening=Math.ceil(daily*se);day=Math.max(0,daily-morning-evening);}
+  return{...row,w4:row.w4||0,w3:row.w3||0,w2:row.w2||0,w1:row.w1||0,wmaVal:w,forecast,daily,morning,day,evening,kTotal:kd*kh*kw*kp*kl};
+}
+
+function calcPlan(){
+  if(tableData.length===0){switchTab('data');return;}
+  planData=tableData.map(calcRow);
+  switchTab('plan');
+}
+
+function renderPlan(){
+  if(!planData.length){document.getElementById('planEmpty').style.display='block';document.getElementById('planContent').style.display='none';return;}
+  document.getElementById('planEmpty').style.display='none';
+  document.getElementById('planContent').style.display='block';
+  const tot=planData.reduce((a,r)=>({m:a.m+r.morning,d:a.d+r.day,e:a.e+r.evening,t:a.t+r.daily}),{m:0,d:0,e:0,t:0});
+  document.getElementById('metricCards').innerHTML=[
+    {label:'Итого выпечка',val:tot.t+' шт',sub:'на день'},
+    {label:'Утренняя партия',val:tot.m+' шт',sub:'до открытия'},
+    {label:'Дневная партия',val:tot.d+' шт',sub:'до 12:00'},
+    {label:'Вечерняя партия',val:tot.e+' шт',sub:'до 17:00'},
+  ].map(c=>`<div class="metric-card"><div class="mc-label">${c.label}</div><div class="mc-val">${c.val}</div><div class="mc-sub">${c.sub}</div></div>`).join('');
+
+  const tbody=document.getElementById('planBody');
+  tbody.innerHTML='';
+  planData.forEach(r=>{
+    const avg=(r.w4+r.w3+r.w2+r.w1)/4;
+    const diff=r.daily-Math.round(avg);
+    const diffHtml=diff>0?`<span class="pill pill-green">+${diff}</span>`:diff<0?`<span class="pill pill-red">${diff}</span>`:`<span class="pill" style="background:var(--color-background-secondary);color:var(--color-text-secondary)">0</span>`;
+    const evCell=r.evening===0?`<span class="plan-badge plan-zero">—</span>`:`<span class="plan-badge plan-evening">${r.evening}</span>`;
+    tbody.innerHTML+=`<tr>
+      <td style="font-size:11px;color:var(--color-text-secondary)">${r.plu}</td>
+      <td style="max-width:200px">${r.name}</td>
+      <td style="text-align:center;color:var(--color-text-secondary)">${r.wmaVal.toFixed(1)}</td>
+      <td style="text-align:center;color:var(--color-text-secondary)">${r.forecast.toFixed(1)}</td>
+      <td style="text-align:center"><span class="plan-badge plan-morning">${r.morning}</span></td>
+      <td style="text-align:center"><span class="plan-badge plan-day">${r.day}</span></td>
+      <td style="text-align:center">${evCell}</td>
+      <td style="text-align:center"><span class="plan-badge plan-total">${r.daily}</span></td>
+      <td style="text-align:center">${diffHtml}</td>
+    </tr>`;
+  });
+
+  document.getElementById('planFoot').innerHTML=`<tr style="background:var(--color-background-secondary)">
+    <td colspan="2" style="font-weight:500;padding:8px 10px">ИТОГО</td>
+    <td></td><td></td>
+    <td style="text-align:center;font-weight:500">${tot.m}</td>
+    <td style="text-align:center;font-weight:500">${tot.d}</td>
+    <td style="text-align:center;font-weight:500">${tot.e}</td>
+    <td style="text-align:center;font-weight:500">${tot.t}</td>
+    <td></td>
+  </tr>`;
+  drawPlanChart();
+}
+
+function drawPlanChart(){
+  const wrap=document.getElementById('planChart');
+  if(!wrap||!planData.length)return;
+  wrap.innerHTML='<canvas id="planCanvas"></canvas>';
+  if(planChart)planChart.destroy();
+  const labels=planData.map(r=>r.name.length>18?r.name.slice(0,18)+'…':r.name);
+  planChart=new Chart(document.getElementById('planCanvas').getContext('2d'),{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'Средние продажи (история)',data:planData.map(r=>+((r.w4+r.w3+r.w2+r.w1)/4).toFixed(1)),backgroundColor:'rgba(120,184,40,0.35)',borderColor:'#78B828',borderWidth:1.5,borderRadius:3,order:2},
+      {label:'План итого',data:planData.map(r=>r.daily),backgroundColor:'rgba(204,34,41,0.75)',borderColor:'#CC2229',borderWidth:0,borderRadius:3,order:1}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12}},tooltip:{mode:'index',intersect:false}},
+      scales:{x:{ticks:{font:{size:10},maxRotation:35},grid:{display:false}},y:{beginAtZero:true,ticks:{font:{size:11}},grid:{color:'rgba(0,0,0,0.05)'}}}}
+  });
+}
+
+function buildExampleTable(){
+  const K=0.608*0.8*0.8*1.3*1.0;
+  const sm=0.45,se=0.15;
+  const tbody=document.getElementById('exampleTbody');
+  if(!tbody)return;
+  tbody.innerHTML='';
+  EXAMPLE_DATA.forEach(r=>{
+    const w=wma(r.w4,r.w3,r.w2,r.w1);
+    const daily=Math.max(3,Math.ceil(w*K));
+    const morning=Math.ceil(daily*sm),evening=Math.ceil(daily*se),day=Math.max(0,daily-morning-evening);
+    tbody.innerHTML+=`<tr>
+      <td>${r.name}</td>
+      <td style="text-align:center">${r.w4}</td><td style="text-align:center">${r.w3}</td>
+      <td style="text-align:center">${r.w2}</td><td style="text-align:center">${r.w1}</td>
+      <td style="text-align:center;color:var(--p5red);font-weight:500">${w.toFixed(1)}</td>
+      <td style="text-align:center"><span class="plan-badge plan-total">${daily}</span></td>
+      <td style="text-align:center"><span class="plan-badge plan-morning">${morning}</span></td>
+      <td style="text-align:center"><span class="plan-badge plan-day">${day}</span></td>
+      <td style="text-align:center"><span class="plan-badge plan-evening">${evening}</span></td>
+    </tr>`;
+  });
+}
+
+function drawExampleChart(){
+  const wrap=document.getElementById('exampleChart');
+  if(!wrap)return;
+  wrap.innerHTML='<canvas id="exCanvas"></canvas>';
+  if(exChart)exChart.destroy();
+  const K=0.608*0.8*0.8*1.3*1.0;
+  const labels=EXAMPLE_DATA.map(r=>r.name.length>16?r.name.slice(0,16)+'…':r.name);
+  const wmaVals=EXAMPLE_DATA.map(r=>+wma(r.w4,r.w3,r.w2,r.w1).toFixed(1));
+  const planVals=wmaVals.map(v=>Math.max(3,Math.ceil(v*K)));
+  exChart=new Chart(document.getElementById('exCanvas').getContext('2d'),{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'WMA (база)',data:wmaVals,backgroundColor:'rgba(120,184,40,0.35)',borderColor:'#78B828',borderWidth:1.5,borderRadius:3,order:2},
+      {label:'План после коррекции',data:planVals,backgroundColor:'rgba(204,34,41,0.75)',borderColor:'#CC2229',borderWidth:0,borderRadius:3,order:1}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12}},tooltip:{mode:'index',intersect:false}},
+      scales:{x:{ticks:{font:{size:10},maxRotation:30},grid:{display:false}},y:{beginAtZero:true,ticks:{font:{size:11}},grid:{color:'rgba(0,0,0,0.05)'}}}}
+  });
+}
+
+function addRow(row){
+  tableData.push(row||{plu:'',name:'',w4:0,w3:0,w2:0,w1:0});
+  renderDataTable();
+}
+
+function removeRow(i){tableData.splice(i,1);renderDataTable();}
+
+function renderDataTable(){
+  const tbody=document.getElementById('dataBody');
+  if(!tbody)return;
+  tbody.innerHTML='';
+  tableData.forEach((r,i)=>{
+    tbody.innerHTML+=`<tr>
+      <td><input type="text" value="${escHtml(r.plu)}" style="width:70px" onchange="tableData[${i}].plu=this.value"></td>
+      <td><input type="text" value="${escHtml(r.name)}" class="name-inp" onchange="tableData[${i}].name=this.value"></td>
+      <td><input type="number" value="${r.w4||0}" min="0" onchange="tableData[${i}].w4=+this.value"></td>
+      <td><input type="number" value="${r.w3||0}" min="0" onchange="tableData[${i}].w3=+this.value"></td>
+      <td><input type="number" value="${r.w2||0}" min="0" onchange="tableData[${i}].w2=+this.value"></td>
+      <td><input type="number" value="${r.w1||0}" min="0" onchange="tableData[${i}].w1=+this.value"></td>
+      <td><button onclick="removeRow(${i})" style="background:none;border:none;cursor:pointer;color:var(--color-text-secondary);padding:4px"><i class="ti ti-x" aria-hidden="true"></i></button></td>
+    </tr>`;
+  });
+  updateDataEmpty();
+}
+
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function updateDataEmpty(){const el=document.getElementById('dataEmpty');if(el)el.style.display=tableData.length===0?'block':'none';}
+function loadExample(){tableData=EXAMPLE_DATA.map(r=>({...r}));renderDataTable();showAlert('Загружены тестовые данные магазина 30VY (6 позиций)','success');}
+
+function detectEncoding(bytes){
+  for(let i=0;i<bytes.length-1;i++){
+    const b=bytes[i];
+    if(b===0xEF&&bytes[i+1]===0xBB&&bytes[i+2]===0xBF)return'utf-8';
+    if(b>=0xC0&&b<=0xDF){
+      const n=bytes[i+1];
+      if(n>=0x80&&n<=0xBF)return'utf-8';
+    }
+    if(b>=0xD0&&b<=0xD1){
+      const n=bytes[i+1];
+      if(n>=0x80&&n<=0xBF)return'utf-8-maybe';
+    }
+    if((b>=0xC0&&b<=0xEF&&b!==0xD0&&b!==0xD1)||(b>=0x80&&b<=0xBF))return'windows-1251-maybe';
+  }
+  return'utf-8';
+}
+
+function win1251decode(bytes){
+  const map=[0x402,0x403,0x201A,0x453,0x201E,0x2026,0x2020,0x2021,0x20AC,0x2030,0x409,0x2039,0x40A,0x40C,0x40B,0x40F,0x452,0x2018,0x2019,0x201C,0x201D,0x2022,0x2013,0x2014,0xFFFF,0x2122,0x459,0x203A,0x45A,0x45C,0x45B,0x45F,0xA0,0x40E,0x45E,0x408,0xA4,0x490,0xA6,0xA7,0x401,0xA9,0x404,0xAB,0xAC,0xAD,0xAE,0x407,0xB0,0xB1,0x406,0x456,0x491,0xB5,0xB6,0xB7,0x451,0x2116,0x454,0xBB,0x458,0x405,0x455,0x457];
+  let s='';
+  for(let i=0;i<bytes.length;i++){
+    const b=bytes[i];
+    if(b<0x80)s+=String.fromCharCode(b);
+    else if(b>=0x80&&b<=0xBF)s+=String.fromCharCode(map[b-0x80]||b);
+    else s+=String.fromCharCode(0x410+(b-0xC0));
+  }
+  return s;
+}
+
+function parseCSVText(text){
+  const rows=[];
+  const lines=text.split('\n').filter(l=>l.trim());
+  for(const line of lines){
+    const parts=line.split(/[;,\t]/);
+    if(parts.length<6)continue;
+    const plu=(parts[0]||'').trim();
+    const name=(parts[1]||'').trim();
+    const w4=parseFloat((parts[2]||'0').replace(',','.'))||0;
+    const w3=parseFloat((parts[3]||'0').replace(',','.'))||0;
+    const w2=parseFloat((parts[4]||'0').replace(',','.'))||0;
+    const w1=parseFloat((parts[5]||'0').replace(',','.'))||0;
+    if(plu&&name&&!/^(PLU|plu|Код|код)/i.test(plu))rows.push({plu,name,w4,w3,w2,w1});
+  }
+  return rows;
+}
+
+function loadCSV(inp){
+  const file=inp.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const arrayBuf=e.target.result;
+    const bytes=new Uint8Array(arrayBuf);
+    let text;
+    const enc=detectEncoding(bytes);
+    if(enc==='windows-1251-maybe'){
+      text=win1251decode(bytes);
+      if(text.indexOf('\uFFFD')>-1||!(/[а-яА-Я]/.test(text))){
+        text=new TextDecoder('utf-8').decode(bytes);
+      }
+    } else {
+      try{
+        text=new TextDecoder('utf-8').decode(bytes);
+        if(!(/[а-яА-Я]/.test(text))&&/[Ã©°¤]/.test(text))throw new Error('likely 1251');
+      }catch(ex){
+        text=win1251decode(bytes);
+      }
+    }
+    if(!text||!(/[а-яА-Я]/.test(text))){
+      text=win1251decode(bytes);
+    }
+    const rows=parseCSVText(text);
+    if(!rows.length){showAlert('Не удалось разобрать CSV. Формат: PLU; Наименование; W-4; W-3; W-2; W-1','warn');return;}
+    tableData=rows;
+    renderDataTable();
+    showAlert('Загружено '+rows.length+' позиций','success');
+  };
+  reader.readAsArrayBuffer(file);
+  inp.value='';
+}
+
+function showAlert(msg,type){
+  const a=document.getElementById('csvAlert');
+  a.className='alert alert-'+type;
+  a.textContent=msg;
+  setTimeout(()=>{a.style.display='none';a.className='alert';},3500);
+}
+
+(function init(){
+  const today=new Date();
+  const pad=n=>String(n).padStart(2,'0');
+  document.getElementById('pDate').value=`${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+  updateDayOfWeek();
+  renderAllCoeffs();
+  buildExampleTable();
+  setTimeout(drawExampleChart,300);
+  updateDataEmpty();
+})();
+</script>
+</body>
+</html>
